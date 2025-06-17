@@ -9,14 +9,15 @@
 
           <v-card-text>
 
-            <!-- Spinner during camera init -->
+            <!-- Camera Overlay Spinner -->
             <v-overlay :value="isLoading" absolute>
               <v-progress-circular indeterminate color="primary" size="64" />
             </v-overlay>
 
-            <!-- QR Camera Scanner -->
+            <!-- QR Scanner -->
             <v-responsive aspect-ratio="1">
               <qrcode-stream
+                ref="scanner"
                 class="rounded-lg overflow-hidden"
                 :constraints="{ video: { facingMode: 'environment' } }"
                 @decode="onDecode"
@@ -24,7 +25,19 @@
               />
             </v-responsive>
 
-            <!-- Current Scan Result -->
+            <!-- Flashlight Toggle -->
+            <v-btn
+              v-if="torchSupported"
+              color="amber darken-2"
+              dark
+              block
+              class="mt-4"
+              @click="toggleTorch"
+            >
+              🔦 {{ torchOn ? 'Turn Off Flashlight' : 'Turn On Flashlight' }}
+            </v-btn>
+
+            <!-- Result -->
             <v-alert
               v-if="result"
               type="success"
@@ -35,7 +48,7 @@
               ✅ Scanned: {{ result }}
             </v-alert>
 
-            <!-- Error message -->
+            <!-- Error -->
             <v-alert
               v-if="error"
               type="error"
@@ -49,7 +62,6 @@
             <!-- Scan History -->
             <v-divider class="my-4" />
             <h3 class="text-subtitle-1 font-weight-medium mb-2">📜 Scan History</h3>
-
             <v-list dense two-line>
               <v-list-item
                 v-for="(item, index) in scanHistory"
@@ -81,33 +93,48 @@ export default {
       result: null,
       error: null,
       isLoading: true,
-      scanHistory: []
+      scanHistory: [],
+      track: null,
+      torchSupported: false,
+      torchOn: false
     }
   },
   methods: {
     onDecode(result) {
       this.result = result
-
-      // Add to history (latest first)
       if (!this.scanHistory.includes(result)) {
         this.scanHistory.unshift(result)
       }
     },
-    onInit(promise) {
+    async onInit(promise) {
       this.isLoading = true
-      promise
-        .then(() => {
-          this.error = null
-        })
-        .catch(err => {
-          this.error =
-            err.name === 'NotAllowedError'
-              ? 'Camera access denied. Please allow it.'
-              : err.message || 'Camera initialization failed.'
-        })
-        .finally(() => {
-          this.isLoading = false
-        })
+      try {
+        const stream = await promise
+        this.error = null
+        const videoTrack = stream.getVideoTracks()[0]
+        this.track = videoTrack
+
+        // Check if torch is supported
+        const capabilities = videoTrack.getCapabilities()
+        this.torchSupported = capabilities.torch || false
+      } catch (err) {
+        this.error = err.name === 'NotAllowedError'
+          ? 'Camera access denied. Please allow it.'
+          : err.message || 'Camera initialization failed.'
+      } finally {
+        this.isLoading = false
+      }
+    },
+    toggleTorch() {
+      if (!this.track) return
+      const desired = !this.torchOn
+      this.track.applyConstraints({
+        advanced: [{ torch: desired }]
+      }).then(() => {
+        this.torchOn = desired
+      }).catch(() => {
+        this.error = 'Flashlight not supported or failed to toggle.'
+      })
     },
     formatTimestamp(index) {
       const now = new Date()
