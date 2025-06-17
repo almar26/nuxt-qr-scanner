@@ -16,46 +16,22 @@
 
             <!-- QR Scanner -->
             <v-responsive aspect-ratio="1">
-              <qrcode-stream
-                ref="scanner"
-                class="rounded-lg overflow-hidden"
-                :constraints="{ video: { facingMode: 'environment' } }"
-                @decode="onDecode"
-                @init="onInit"
-              />
+              <qrcode-stream ref="scanner" class="rounded-lg overflow-hidden"
+                :constraints="{ video: { facingMode: 'environment' } }" @decode="onDecode" @init="onInit" />
             </v-responsive>
 
             <!-- Flashlight Toggle -->
-            <v-btn
-              v-if="torchSupported"
-              color="amber darken-2"
-              dark
-              block
-              class="mt-4"
-              @click="toggleTorch"
-            >
+            <v-btn v-if="torchSupported" color="amber darken-2" dark block class="mt-4" @click="toggleTorch">
               🔦 {{ torchOn ? 'Turn Off Flashlight' : 'Turn On Flashlight' }}
             </v-btn>
 
             <!-- Result -->
-            <v-alert
-              v-if="result"
-              type="success"
-              class="mt-4"
-              dense
-              text
-            >
+            <v-alert v-if="result" type="success" class="mt-4" dense text>
               ✅ Scanned: {{ result }}
             </v-alert>
 
             <!-- Error -->
-            <v-alert
-              v-if="error"
-              type="error"
-              class="mt-4"
-              dense
-              text
-            >
+            <v-alert v-if="error" type="error" class="mt-4" dense text>
               ⚠️ {{ error }}
             </v-alert>
 
@@ -63,10 +39,7 @@
             <v-divider class="my-4" />
             <h3 class="text-subtitle-1 font-weight-medium mb-2">📜 Scan History</h3>
             <v-list dense two-line>
-              <v-list-item
-                v-for="(item, index) in scanHistory"
-                :key="index"
-              >
+              <v-list-item v-for="(item, index) in scanHistory" :key="index">
                 <v-list-item-content>
                   <v-list-item-title class="text-truncate">{{ item }}</v-list-item-title>
                   <v-list-item-subtitle>{{ formatTimestamp(index) }}</v-list-item-subtitle>
@@ -106,24 +79,24 @@ export default {
         this.scanHistory.unshift(result)
       }
     },
-    async onInit(promise) {
+    onInit(promise) {
       this.isLoading = true
-      try {
-        const stream = await promise
-        this.error = null
-        const videoTrack = stream.getVideoTracks()[0]
-        this.track = videoTrack
+      promise
+        .then((stream) => {
+          // ✅ stream is a MediaStream — safe to use getVideoTracks()
+          const videoTrack = stream.getVideoTracks()[0]
+          this.track = videoTrack
 
-        // Check if torch is supported
-        const capabilities = videoTrack.getCapabilities()
-        this.torchSupported = capabilities.torch || false
-      } catch (err) {
-        this.error = err.name === 'NotAllowedError'
-          ? 'Camera access denied. Please allow it.'
-          : err.message || 'Camera initialization failed.'
-      } finally {
-        this.isLoading = false
-      }
+          // 🔦 Check flashlight support
+          const capabilities = videoTrack.getCapabilities()
+          this.torchSupported = capabilities.torch || false
+        })
+        .catch((err) => {
+          this.error = err.message || 'Camera initialization failed.'
+        })
+        .finally(() => {
+          this.isLoading = false
+        })
     },
     toggleTorch() {
       if (!this.track) return
