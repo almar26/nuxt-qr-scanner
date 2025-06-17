@@ -133,24 +133,47 @@ export default {
         time: new Date()
       });
 
-      // Stop scanner after scan
-      //this.html5QrCode.stop().catch(() => {});
+      // Stop scanning, wait a moment, then restart
+  this.html5QrCode
+    .stop()
+    .then(() => {
+      setTimeout(() => {
+        this.html5QrCode
+          .start(
+            this.cameraId,
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+              rememberLastUsedCamera: true,
+              facingMode: "environment"
+            },
+            this.onScanSuccess,
+            this.onScanError
+          )
+          .catch(err => {
+            this.error = "Restart failed: " + (err.message || err);
+          });
+      }, 1000); // 1 second delay before restart
+    })
+    .catch(err => {
+      this.error = "Stop failed: " + (err.message || err);
+    });
     },
     onScanError(_) {
       // silent or log error optionally
     },
-    toggleTorch() {
-      if (!this.html5QrCode) return;
-      const track = this.html5QrCode.getRunningTrack();
-      if (track) {
-        this.torchOn = !this.torchOn;
-        track
-          .applyConstraints({ advanced: [{ torch: this.torchOn }] })
-          .catch(() => {
-            this.error = "Flashlight toggle failed.";
-          });
-      }
-    },
+    // toggleTorch() {
+    //   if (!this.html5QrCode) return;
+    //   const track = this.html5QrCode.getRunningTrack();
+    //   if (track) {
+    //     this.torchOn = !this.torchOn;
+    //     track
+    //       .applyConstraints({ advanced: [{ torch: this.torchOn }] })
+    //       .catch(() => {
+    //         this.error = "Flashlight toggle failed.";
+    //       });
+    //   }
+    // },
     formatTimestamp(date) {
       return new Date(date).toLocaleString();
     }
