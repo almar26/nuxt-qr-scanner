@@ -38,6 +38,10 @@
 
 
         <!-- Result -->
+        <!-- <v-snackbar color="green" v-model="snackbarResult">
+          Successfully scanned
+
+        </v-snackbar> -->
 
         <v-card outlined class="mt-4">
           <v-card-subtitle class="text-center">Scan Result:</v-card-subtitle>
@@ -56,14 +60,14 @@
             {{ error }}
           </v-alert>
 
-    
+
 
           <!-- Scan Result -->
           <!-- <v-alert v-if="result" type="success" dense class="mt-4">
             Scanned: {{ result }}
           </v-alert> -->
 
-   
+
 
 
           <!-- History -->
@@ -97,6 +101,49 @@
 
 
     </v-card>
+
+    <v-dialog v-model="dialog" max-width="500" transition="dialog-bottom-transition">
+
+      <v-card class="pa-4 rounded-xl">
+        <transition name="scale-fade">
+          <div class="d-flex justify-center" v-if="dialog">
+            <v-icon color="success" class="success-pulse" size="68">mdi-check-circle</v-icon>
+          </div>
+        </transition>
+        <v-card-title class="text-h6 font-weight-bold justify-center text-primary">
+        Scan Successful
+        </v-card-title>
+
+        <v-card-text class="pt-4">
+          <v-sheet class="pa-4 rounded-lg mb-4">
+            <div class="text-caption text-grey-darken-1 text-center">Scanned Data:</div>
+            <div class="text-body-1 font-weight-medium mt-1 break-words text-center">
+              {{ result }}
+            </div>
+          </v-sheet>
+
+          <v-row dense justify="center">
+            <v-col cols="12" sm="6" class="text-center">
+              <v-icon small class="mr-1" color="primary">mdi-calendar-clock</v-icon>
+              <strong>Time:</strong>
+              <div class="text-caption mt-1">{{ formatTimestamp(scanTime) }}</div>
+            </v-col>
+
+            <!-- <v-col cols="12" sm="6">
+              <v-icon small class="mr-1" color="primary">mdi-camera</v-icon>
+              <strong>Camera:</strong>
+              <div class="text-caption mt-1">dasda sda </div>
+            </v-col> -->
+          </v-row>
+        </v-card-text>
+
+        <!-- <v-card-actions class="justify-end pt-0">
+          <v-btn color="primary" variant="flat" @click="dialog = false">
+            Close
+          </v-btn>
+        </v-card-actions> -->
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -106,6 +153,8 @@ import { Html5Qrcode } from "html5-qrcode";
 export default {
   data() {
     return {
+      dialog: false,
+      scanTime: '',
       html5QrCode: null,
       cameraId: null,
       isScanning: false,
@@ -166,7 +215,9 @@ export default {
     onScanSuccess(decodedText) {
 
       this.result = decodedText;
-      this.snackbarResult = true;
+      this.scanTime = new Date();
+      //this.snackbarResult = true;
+      this.dialog = true; // Show dialog
       this.history.unshift({
         text: decodedText,
         time: new Date()
@@ -174,7 +225,10 @@ export default {
 
       // console.log("Success")
       this.stopScanner().then(() => {
-        setTimeout(() => this.startScanner(), 1000);
+        setTimeout(() => {
+          this.startScanner();
+          this.dialog = false;
+        }, 2000);
       });
     },
 
@@ -208,5 +262,34 @@ export default {
   height: 100vh;
   background: rgba(255, 255, 255, 0.75);
   z-index: 9999;
+}
+
+.scale-fade-enter-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.scale-fade-enter-from {
+  transform: scale(0.5);
+  opacity: 0;
+}
+
+.success-pulse {
+  animation: pulseSuccess 1.2s ease-out;
+}
+
+@keyframes pulseSuccess {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.1;
+  }
+
+  60% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 </style>
