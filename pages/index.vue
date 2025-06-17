@@ -1,10 +1,11 @@
 <template>
   <div>
-    <qrcode-stream
+    <!-- <qrcode-stream
       :constraints="{ video: {deviceId: {exact: 'f339900afe8c93e4eb755f9713833bb384beb9378ecfe6216f5bd7b3c4a56c83'} } }"
       @decode="onDecode"
       @init="onInit"
-    />
+    /> -->
+    <qrcode-stream @decode="onDecode" @init="onInit" />
     <p v-if="result">Scanned: {{ result }}</p>
   </div>
 </template>

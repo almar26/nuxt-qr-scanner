@@ -1,6 +1,9 @@
 <template>
   <div>
-    <div id="reader" style="width: 600px;"></div>
+    <v-card>
+      <div id="reader" ></div>
+    </v-card>
+    
     <v-btn @click="startScan()">Start Scan</v-btn>
     <v-btn @click="stopScan()">Stop Scan</v-btn>
     <p v-if="scannedResult">Scanned: {{ scannedResult }}</p>
@@ -84,8 +87,8 @@ export default {
   border: 1px solid #ccc;
   width: 100%;
   /* Adjust as needed */
-  max-width: 600px;
+  max-width: 80vh;
   /* Adjust as needed */
-  margin: auto;
+  /* margin: auto; */
 }
 </style>
