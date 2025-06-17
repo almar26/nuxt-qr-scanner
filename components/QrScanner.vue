@@ -10,36 +10,17 @@
             <div id="reader" class="rounded-lg overflow-hidden" style="width: 100%; height: auto;"></div>
 
             <!-- Flashlight Toggle -->
-            <v-btn
-              v-if="torchSupported"
-              class="mt-4"
-              color="amber darken-2"
-              dark
-              block
-              @click="toggleTorch"
-            >
+            <v-btn v-if="torchSupported" class="mt-4" color="amber darken-2" dark block @click="toggleTorch">
               🔦 {{ torchOn ? 'Turn Off Flashlight' : 'Turn On Flashlight' }}
             </v-btn>
 
             <!-- Current Result -->
-            <v-alert
-              v-if="result"
-              type="success"
-              class="mt-4"
-              dense
-              text
-            >
+            <v-alert v-if="result" type="success" class="mt-4" dense text>
               ✅ Scanned: {{ result }}
             </v-alert>
 
             <!-- Error -->
-            <v-alert
-              v-if="error"
-              type="error"
-              class="mt-2"
-              dense
-              text
-            >
+            <v-alert v-if="error" type="error" class="mt-2" dense text>
               ⚠️ {{ error }}
             </v-alert>
 
@@ -47,10 +28,7 @@
             <v-divider class="my-4" />
             <h3 class="text-subtitle-1 font-weight-medium mb-2">📜 Scan History</h3>
             <v-list dense two-line>
-              <v-list-item
-                v-for="(item, index) in scanHistory"
-                :key="index"
-              >
+              <v-list-item v-for="(item, index) in scanHistory" :key="index">
                 <v-list-item-content>
                   <v-list-item-title class="text-truncate">{{ item.text }}</v-list-item-title>
                   <v-list-item-subtitle>{{ formatTimestamp(item.time) }}</v-list-item-subtitle>
@@ -105,18 +83,18 @@ export default {
               facingMode: "environment"
             },
             {
-               fps: 10,
+              fps: 10,
               qrbox: { width: 250, height: 250 },
             },
             this.onScanSuccess,
             this.onScanError
           );
 
-          const track = this.html5QrCode.getRunningTrack();
-          const capabilities = track.getCapabilities?.();
-          if (capabilities && capabilities.torch) {
-            this.torchSupported = true;
-          }
+          // const track = this.html5QrCode.getRunningTrack();
+          // const capabilities = track.getCapabilities?.();
+          // if (capabilities && capabilities.torch) {
+          //   this.torchSupported = true;
+          // }
         } else {
           this.error = "No camera found.";
         }
@@ -134,30 +112,29 @@ export default {
       });
 
       // Stop scanning, wait a moment, then restart
-  this.html5QrCode
-    .stop()
-    .then(() => {
-      setTimeout(() => {
-        this.html5QrCode
-          .start(
-            this.cameraId,
-            {
-              fps: 10,
-              qrbox: { width: 250, height: 250 },
-              rememberLastUsedCamera: true,
-              facingMode: "environment"
-            },
-            this.onScanSuccess,
-            this.onScanError
-          )
-          .catch(err => {
-            this.error = "Restart failed: " + (err.message || err);
-          });
-      }, 1000); // 1 second delay before restart
-    })
-    .catch(err => {
-      this.error = "Stop failed: " + (err.message || err);
-    });
+      this.html5QrCode
+        .stop()
+        .then(() => {
+          setTimeout(() => {
+            this.html5QrCode
+              .start(
+                {
+                  fps: 10,
+                  qrbox: { width: 250, height: 250 },
+                  //rememberLastUsedCamera: true,
+                  facingMode: "environment"
+                },
+                this.onScanSuccess,
+                this.onScanError
+              )
+              .catch(err => {
+                this.error = "Restart failed: " + (err.message || err);
+              });
+          }, 1000); // 1 second delay before restart
+        })
+        .catch(err => {
+          this.error = "Stop failed: " + (err.message || err);
+        });
     },
     onScanError(_) {
       // silent or log error optionally
@@ -180,7 +157,7 @@ export default {
   },
   beforeDestroy() {
     if (this.html5QrCode) {
-      this.html5QrCode.stop().catch(() => {});
+      this.html5QrCode.stop().catch(() => { });
     }
   }
 };
