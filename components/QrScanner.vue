@@ -9,25 +9,16 @@
           <div id="reader" style="width: 100%; " />
           <div v-if="!isLoading" class="text-center mt-4">
             <v-progress-circular indeterminate color="primary" size="24" />
-    <div class="mt-2">Scanning...</div>
+            <div class="mt-2">Scanning...</div>
           </div>
           <div v-if="isLoading" class="d-flex align-center justify-center" style="height: 300px;">
-             <v-progress-circular indeterminate color="primary" size="64" />
-          </div>
-          <!-- <div v-if="isLoading" class="d-flex align-center justify-center"
-            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.6); z-index: 10;">
             <v-progress-circular indeterminate color="primary" size="64" />
-          </div> -->
-          <!-- <transition name="fade">
-            <div v-if="isLoading" class="fullscreen-loader d-flex align-center justify-center">
-              <v-progress-circular indeterminate color="primary" size="64" />
-            </div>
-          </transition> -->
+          </div>
+
         </div>
 
 
         <!-- When not scanning -->
-
         <div v-else class="text-center py-10 text-grey">
           <v-icon size="64">mdi-qrcode-scan</v-icon>
           <div class="mt-2">Scanner is not active</div>
@@ -42,7 +33,7 @@
         <v-btn color="error" @click="stopScanner" v-else>
           Stop Scanning
         </v-btn>
-        <v-btn v-if="torchSupported" :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
+        <v-btn  :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
           {{ torchOn ? 'Flashlight Off' : 'Flashlight On' }}
         </v-btn>
       </v-row>
@@ -61,13 +52,7 @@
           <!-- History -->
           <v-divider></v-divider>
           <v-card-subtitle class="mt-4">Scan History</v-card-subtitle>
-          <!-- <v-list dense>
-        <v-list-item v-for="(item, index) in history" :key="index">
-          <v-list-item-content>
-            <v-list-item-title>{{ item }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list> -->
+
           <v-list dense two-line>
             <div v-for="(item, index) in history" :key="index">
               <v-list-item>
@@ -139,9 +124,9 @@ export default {
           );
 
           // Torch support
-          // const track = this.html5QrCode.getRunningTrack();
-          // const capabilities = track?.getCapabilities?.();
-          // this.torchSupported = capabilities?.torch || false;
+          const track = this.html5QrCode.getRunningTrack();
+          const capabilities = track?.getCapabilities?.();
+          this.torchSupported = capabilities?.torch || false;
         } catch (err) {
           console.error("Start error:", err);
           this.error = "Failed to start scanner: " + (err.message || err);
@@ -153,15 +138,6 @@ export default {
     },
 
     async stopScanner() {
-      // if (this.html5QrCode) {
-      //   this.html5QrCode.stop().then(() => {
-      //     this.html5QrCode.clear();
-      //     this.html5QrCode = null;
-      //   });
-      // }
-      // this.isScanning = false;
-      // this.torchOn = false;
-
       if (!this.html5QrCode) return;
       try {
         await this.html5QrCode.stop();
