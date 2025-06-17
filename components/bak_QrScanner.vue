@@ -1,71 +1,57 @@
 <template>
-  <v-container class="fill-height" fluid>
-    <v-row justify="center" align="center">
-      <v-col cols="12" md="6" lg="4">
-        <v-card class="pa-4" outlined>
-          <v-card-title class="headline justify-center">QR Code Scanner</v-card-title>
+  <v-container>
+    <v-card class="mx-auto pa-4" max-width="500">
+      <v-card-title>QR Scanner</v-card-title>
 
-          <v-card-text>
-            <!-- Spinner during camera init -->
-            <v-overlay :value="isLoading" absolute>
-              <v-progress-circular indeterminate color="primary" size="64" />
-            </v-overlay>
-            <!-- QR Scanner Area -->
-            <!-- <v-responsive aspect-ratio="1">
-              <div id="reader" v-show="isShow" class="rounded-lg overflow-hidden" style="width: 100%;"></div>
-            </v-responsive> -->
-            <!-- QR Scanner Area -->
-            <div v-show="isScanning"  id="reader" class="rounded-lg overflow-hidden" style="width: 100%; height: auto;">
-            </div>
+      <!-- Scanner area -->
+      <transition name="fade">
+        <div v-if="isScanning">
+          <div id="reader" style="width: 100%; min-height: 300px;" />
+          <v-progress-circular v-if="isLoading" indeterminate color="primary" class="ma-4" />
+        </div>
 
-            <!-- Idle Placeholder -->
-            <div v-if="!isScanning" class="text-center py-10 grey lighten-4 rounded-lg">
-              <v-icon size="48" color="grey darken-1">mdi-camera-off</v-icon>
-              <div class="mt-4 text-subtitle-1 font-weight-medium">Scanner is not active</div>
-              <div class="text-body-2 grey--text mb-4">Click the button below to start scanning QR codes.</div>
-              <!-- <v-btn color="primary" @click="startScanner">▶️ Start Scanning</v-btn> -->
-            </div>
 
-            <!-- Scanner Control Buttons -->
-            <v-btn class="mt-4" color="primary" block @click="startScanner" :disabled="isScanning">
-              ▶️ Start Scanning
-            </v-btn>
+        <!-- When not scanning -->
 
-            <v-btn class="mt-2" color="red darken-1" block @click="stopScanner" :disabled="!isScanning">
-              ⏹ Stop Scanning
-            </v-btn>
+        <div v-else class="text-center py-10 text-grey">
+          <v-icon size="64">mdi-qrcode-scan</v-icon>
+          <div class="mt-2">Scanner is not active</div>
+        </div>
+      </transition>
 
-            <!-- Current Result -->
-            <v-alert v-if="result" type="success" class="mt-4" dense text>
-              ✅ Scanned: {{ result }}
-            </v-alert>
+      <!-- Action buttons -->
+      <v-row justify="center" class="mt-4">
+        <v-btn color="primary" @click="startScanner" v-if="!isScanning">
+          Start Scanning
+        </v-btn>
+        <v-btn color="error" @click="stopScanner" v-else>
+          Stop Scanning
+        </v-btn>
+        <v-btn v-if="torchSupported" :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
+          {{ torchOn ? 'Flashlight Off' : 'Flashlight On' }}
+        </v-btn>
+      </v-row>
 
-            <!-- Error -->
-            <v-alert v-if="error" type="error" class="mt-2" dense text>
-              ⚠️ {{ error }}
-            </v-alert>
+      <!-- Error -->
+      <v-alert v-if="error" type="error" dense class="mt-4">
+        {{ error }}
+      </v-alert>
 
-            <!-- Scan History -->
-            <v-divider class="my-4" />
-            <h3 class="text-subtitle-1 font-weight-medium mb-2">📜 Scan History</h3>
-            <v-list dense two-line>
-              <v-list-item v-for="(item, index) in scanHistory" :key="index">
-                <v-list-item-content>
-                  <v-list-item-title class="text-truncate">{{ item.text }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatTimestamp(item.time) }}</v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-              <v-list-item v-if="scanHistory.length === 0">
-                <v-list-item-content>
-                  <v-list-item-title class="grey--text">No scans yet</v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
+      <!-- Scan Result -->
+      <v-alert v-if="result" type="success" dense class="mt-4">
+        Scanned: {{ result }}
+      </v-alert>
 
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+      <!-- History -->
+      <v-card-subtitle class="mt-4">Scan History</v-card-subtitle>
+      <v-list dense>
+        <v-list-item v-for="(item, index) in history" :key="index">
+          <v-list-item-content>
+            <v-list-item-title>{{ item }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-card>
   </v-container>
 </template>
 
@@ -76,145 +62,105 @@ export default {
   data() {
     return {
       html5QrCode: null,
-      isLoading: true,
+      cameraId: null,
+      isScanning: false,
+      isLoading: false,
       result: null,
       error: null,
-      torchSupported: false,
+      history: [],
       torchOn: false,
-      cameraId: null,
-      scanHistory: [],
-      isScanning: false,
-      isShow: false
+      torchSupported: false,
     };
   },
-  mounted() {
-    // if (process.client) {
-    //   this.initScanner();
-    // }
-    this.initScanner()
-  },
   methods: {
-    async initScanner() {
-      try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cameras && cameras.length) {
-          this.isLoading = false;
+    async startScanner() {
+      this.isScanning = true;
+      this.isLoading = true;
+      this.result = null;
+      this.error = null;
+
+      this.$nextTick(async () => {
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras.length) throw new Error("No cameras found.");
+
+          this.cameraId = cameras[0].id;
           this.html5QrCode = new Html5Qrcode("reader");
-          const config = { fps: 10, qrbox: 250 };
-          // await this.html5QrCode.start(
-          //   //this.cameraId,
-          //   { facingMode: "environment" },
-          //   config,
-          //   this.onScanSuccess,
-          //   this.onScanError
-          // );
-        } else {
-          this.error = "No camera found.";
+
+          await this.html5QrCode.start(
+            //this.cameraId,
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            this.onScanSuccess,
+            this.onScanError
+          );
+
+          // Torch support
+          const track = this.html5QrCode.getRunningTrack();
+          const capabilities = track?.getCapabilities?.();
+          this.torchSupported = capabilities?.torch || false;
+        } catch (err) {
+          console.error("Start error:", err);
+          this.error = "Failed to start scanner: " + (err.message || err);
+          this.isScanning = false;
+        } finally {
+          this.isLoading = false;
         }
+      });
+    },
+
+    stopScanner() {
+      if (this.html5QrCode) {
+        this.html5QrCode.stop().then(() => {
+          this.html5QrCode.clear();
+          this.html5QrCode = null;
+        });
+      }
+      this.isScanning = false;
+      this.torchOn = false;
+    },
+
+    async toggleTorch() {
+      try {
+        const track = this.html5QrCode?.getRunningTrack();
+        const capabilities = track?.getCapabilities?.();
+        if (!capabilities?.torch) {
+          this.error = "Torch not supported on this device.";
+          return;
+        }
+
+        this.torchOn = !this.torchOn;
+
+        await track.applyConstraints({
+          advanced: [{ torch: this.torchOn }],
+        });
       } catch (err) {
-        this.error = err.message || "Failed to initialize scanner.";
+        console.error("toggleTorch error:", err);
+        this.error = "Failed to toggle flashlight.";
       }
     },
+
     onScanSuccess(decodedText) {
       this.result = decodedText;
-
-      // Add to history
-      this.scanHistory.unshift({
-        text: decodedText,
-        time: new Date()
-      });
-
-      // Stop scanning, wait a moment, then restart
-      this.isLoading = true;
-      this.stopScanner().then(() => {
-        setTimeout(() => this.startScanner(), 1000);
-      });
-      // this.html5QrCode
-      //   .stop()
-      //   .then(() => {
-      //     setTimeout(() => {
-      //       this.isLoading = false;
-      //       this.html5QrCode
-      //         .start(
-      //           {
-
-      //             //rememberLastUsedCamera: true,
-      //             facingMode: "environment"
-      //           },
-      //           {
-      //             fps: 10,
-      //             qrbox: { width: 250, height: 250 },
-      //           },
-      //           this.onScanSuccess,
-      //           this.onScanError
-      //         )
-      //         .catch(err => {
-      //           this.error = "Restart failed: " + (err.message || err);
-      //         });
-      //     }, 1000); // 1 second delay before restart
-      //   })
-      //   .catch(err => {
-      //     this.error = "Stop failed: " + (err.message || err);
-      //   });
-    },
-    onScanError(_) {
-      // silent or log error optionally
+      this.history.unshift(decodedText);
+      this.stopScanner();
     },
 
-    formatTimestamp(date) {
-      return new Date(date).toLocaleString();
+    onScanError(error) {
+      // Handle scan error (can be ignored for now)
     },
-
-    async startScanner() {
-     
-      if (!this.html5QrCode || this.isScanning) return;
-      try {
-    this.isLoading = true;
-       // this.isShow = true;
-       this.isScanning = true;
-        await this.html5QrCode.start(
-          //this.cameraId,
-          {
-
-            facingMode: "environment"
-          },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          this.onScanSuccess,
-          this.onScanError
-        );
-        this.isLoading = false;
-         
-        
-
-
-      } catch (err) {
-        this.error = "Failed to start scanner: " + (err.message || err);
-      }
-    },
-
-    async stopScanner() {
-      if (!this.html5QrCode || !this.isScanning) return;
-
-      try {
-        await this.html5QrCode.stop();
-        this.isScanning = false;
-      } catch (err) {
-        this.error = "Failed to stop scanner: " + (err.message || err);
-      }
-    }
   },
-  beforeDestroy() {
-    if (this.html5QrCode) {
-      this.html5QrCode.stop().catch(() => { });
-    }
-  }
 };
 </script>
+
 <style scoped>
-#reader {
-  min-height: 250px;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
