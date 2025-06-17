@@ -6,8 +6,23 @@
       <!-- Scanner area -->
       <transition name="fade">
         <div v-if="isScanning">
-          <div id="reader" style="width: 100%; min-height: 300px;" />
-          <v-progress-circular v-if="isLoading" indeterminate color="primary" class="ma-4" />
+          <div id="reader" style="width: 100%; " />
+          <div v-if="!isLoading" class="text-center mt-4">
+            <v-progress-circular indeterminate color="primary" size="24" />
+    <div class="mt-2">Scanning...</div>
+          </div>
+          <div v-if="isLoading" class="d-flex align-center justify-center" style="height: 300px;">
+             <v-progress-circular indeterminate color="primary" size="64" />
+          </div>
+          <!-- <div v-if="isLoading" class="d-flex align-center justify-center"
+            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.6); z-index: 10;">
+            <v-progress-circular indeterminate color="primary" size="64" />
+          </div> -->
+          <!-- <transition name="fade">
+            <div v-if="isLoading" class="fullscreen-loader d-flex align-center justify-center">
+              <v-progress-circular indeterminate color="primary" size="64" />
+            </div>
+          </transition> -->
         </div>
 
 
@@ -31,26 +46,54 @@
           {{ torchOn ? 'Flashlight Off' : 'Flashlight On' }}
         </v-btn>
       </v-row>
+      <v-row>
+        <v-col>
+          <!-- Error -->
+          <v-alert v-if="error" type="error" dense class="mt-4">
+            {{ error }}
+          </v-alert>
 
-      <!-- Error -->
-      <v-alert v-if="error" type="error" dense class="mt-4">
-        {{ error }}
-      </v-alert>
+          <!-- Scan Result -->
+          <v-alert v-if="result" type="success" dense class="mt-4">
+            Scanned: {{ result }}
+          </v-alert>
 
-      <!-- Scan Result -->
-      <v-alert v-if="result" type="success" dense class="mt-4">
-        Scanned: {{ result }}
-      </v-alert>
-
-      <!-- History -->
-      <v-card-subtitle class="mt-4">Scan History</v-card-subtitle>
-      <v-list dense>
+          <!-- History -->
+          <v-divider></v-divider>
+          <v-card-subtitle class="mt-4">Scan History</v-card-subtitle>
+          <!-- <v-list dense>
         <v-list-item v-for="(item, index) in history" :key="index">
           <v-list-item-content>
             <v-list-item-title>{{ item }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-      </v-list>
+      </v-list> -->
+          <v-list dense two-line>
+            <div v-for="(item, index) in history" :key="index">
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="text-truncate">
+                    {{ item.text }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ formatTimestamp(item.time) }}
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+              <v-divider></v-divider>
+            </div>
+            <v-list-item v-if="history.length === 0">
+              <v-list-item-content>
+                <v-list-item-title class="grey--text text-center">
+                  No scans yet
+                </v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-col>
+      </v-row>
+
+
     </v-card>
   </v-container>
 </template>
@@ -96,9 +139,9 @@ export default {
           );
 
           // Torch support
-          const track = this.html5QrCode.getRunningTrack();
-          const capabilities = track?.getCapabilities?.();
-          this.torchSupported = capabilities?.torch || false;
+          // const track = this.html5QrCode.getRunningTrack();
+          // const capabilities = track?.getCapabilities?.();
+          // this.torchSupported = capabilities?.torch || false;
         } catch (err) {
           console.error("Start error:", err);
           this.error = "Failed to start scanner: " + (err.message || err);
@@ -109,15 +152,24 @@ export default {
       });
     },
 
-    stopScanner() {
-      if (this.html5QrCode) {
-        this.html5QrCode.stop().then(() => {
-          this.html5QrCode.clear();
-          this.html5QrCode = null;
-        });
+    async stopScanner() {
+      // if (this.html5QrCode) {
+      //   this.html5QrCode.stop().then(() => {
+      //     this.html5QrCode.clear();
+      //     this.html5QrCode = null;
+      //   });
+      // }
+      // this.isScanning = false;
+      // this.torchOn = false;
+
+      if (!this.html5QrCode) return;
+      try {
+        await this.html5QrCode.stop();
+        this.isScanning = false;
+        this.torchOn = false;
+      } catch (err) {
+        this.error = "Failed to stop scanner: " + (err.message || err);
       }
-      this.isScanning = false;
-      this.torchOn = false;
     },
 
     async toggleTorch() {
@@ -141,14 +193,26 @@ export default {
     },
 
     onScanSuccess(decodedText) {
+
       this.result = decodedText;
-      this.history.unshift(decodedText);
-      this.stopScanner();
+      this.history.unshift({
+        text: decodedText,
+        time: new Date()
+      });
+
+      // console.log("Success")
+      this.stopScanner().then(() => {
+        setTimeout(() => this.startScanner(), 1000);
+      });
     },
 
     onScanError(error) {
       // Handle scan error (can be ignored for now)
     },
+
+    formatTimestamp(date) {
+      return new Date(date).toLocaleString();
+    }
   },
 };
 </script>
@@ -162,5 +226,15 @@ export default {
 .fade-enter,
 .fade-leave-to {
   opacity: 0;
+}
+
+.fullscreen-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.75);
+  z-index: 9999;
 }
 </style>

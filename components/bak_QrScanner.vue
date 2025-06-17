@@ -1,57 +1,85 @@
 <template>
-  <v-container>
-    <v-card class="mx-auto pa-4" max-width="500">
-      <v-card-title>QR Scanner</v-card-title>
+  <v-container class="fill-height" fluid>
+    <v-row justify="center" align="center">
+      <v-col cols="12" md="6" lg="4">
+        <v-card class="pa-4" outlined>
+          <v-card-title class="headline justify-center">QR Code Scanner</v-card-title>
 
-      <!-- Scanner area -->
-      <transition name="fade">
-        <div v-if="isScanning">
-          <div id="reader" style="width: 100%; min-height: 300px;" />
-          <v-progress-circular v-if="isLoading" indeterminate color="primary" class="ma-4" />
-        </div>
+          <v-card-text>
 
+            <!-- Scanner Transition UI -->
+            <transition name="fade">
+              <!-- Scanner Active -->
+              <div v-if="isScanning" key="scanner">
+                <div id="reader" class="rounded-lg overflow-hidden" style="width: 100%; height: auto;"></div>
+              </div>
 
-        <!-- When not scanning -->
+              <!-- Scanner Inactive -->
+              <div v-else key="placeholder" class="text-center py-10 grey lighten-4 rounded-lg">
+                <v-icon size="48" color="grey darken-1">mdi-camera-off</v-icon>
+                <div class="mt-4 text-subtitle-1 font-weight-medium">
+                  Scanner is not active
+                </div>
+                <div class="text-body-2 grey--text mb-4">
+                  Click the button below to start scanning QR codes.
+                </div>
+                <v-btn color="primary" @click="startScanner">▶️ Start Scanning</v-btn>
+              </div>
+            </transition>
 
-        <div v-else class="text-center py-10 text-grey">
-          <v-icon size="64">mdi-qrcode-scan</v-icon>
-          <div class="mt-2">Scanner is not active</div>
-        </div>
-      </transition>
+            <!-- Flashlight Toggle -->
+            <v-btn v-if="torchSupported" class="mt-4" color="amber darken-2" dark block @click="toggleTorch">
+              🔦 {{ torchOn ? 'Turn Off Flashlight' : 'Turn On Flashlight' }}
+            </v-btn>
 
-      <!-- Action buttons -->
-      <v-row justify="center" class="mt-4">
-        <v-btn color="primary" @click="startScanner" v-if="!isScanning">
-          Start Scanning
-        </v-btn>
-        <v-btn color="error" @click="stopScanner" v-else>
-          Stop Scanning
-        </v-btn>
-        <v-btn v-if="torchSupported" :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
-          {{ torchOn ? 'Flashlight Off' : 'Flashlight On' }}
-        </v-btn>
-      </v-row>
+            <!-- Start/Stop Buttons -->
+            <v-btn class="mt-4" color="primary" block @click="startScanner" :disabled="isScanning">
+              ▶️ Start Scanning
+            </v-btn>
 
-      <!-- Error -->
-      <v-alert v-if="error" type="error" dense class="mt-4">
-        {{ error }}
-      </v-alert>
+            <v-btn class="mt-2" color="red darken-1" block @click="stopScanner" :disabled="!isScanning">
+              ⏹ Stop Scanning
+            </v-btn>
 
-      <!-- Scan Result -->
-      <v-alert v-if="result" type="success" dense class="mt-4">
-        Scanned: {{ result }}
-      </v-alert>
+            <!-- Scanned Result -->
+            <v-alert v-if="result" type="success" class="mt-4" dense text>
+              ✅ Scanned: {{ result }}
+            </v-alert>
 
-      <!-- History -->
-      <v-card-subtitle class="mt-4">Scan History</v-card-subtitle>
-      <v-list dense>
-        <v-list-item v-for="(item, index) in history" :key="index">
-          <v-list-item-content>
-            <v-list-item-title>{{ item }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
-    </v-card>
+            <!-- Error Message -->
+            <v-alert v-if="error" type="error" class="mt-2" dense text>
+              ⚠️ {{ error }}
+            </v-alert>
+
+            <!-- Scan History -->
+            <v-divider class="my-4" />
+            <h3 class="text-subtitle-1 font-weight-medium mb-2">
+              📜 Scan History
+            </h3>
+            <v-list dense two-line>
+              <v-list-item v-for="(item, index) in scanHistory" :key="index">
+                <v-list-item-content>
+                  <v-list-item-title class="text-truncate">
+                    {{ item.text }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ formatTimestamp(item.time) }}
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+              <v-list-item v-if="scanHistory.length === 0">
+                <v-list-item-content>
+                  <v-list-item-title class="grey--text">
+                    No scans yet
+                  </v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -62,101 +90,151 @@ export default {
   data() {
     return {
       html5QrCode: null,
-      cameraId: null,
-      isScanning: false,
-      isLoading: false,
       result: null,
       error: null,
-      history: [],
-      torchOn: false,
       torchSupported: false,
+      torchOn: false,
+      cameraId: null,
+      scanHistory: [],
+      isScanning: false
     };
   },
+  mounted() {
+    // if (process.client) {
+    //   this.initScanner();
+    // }
+  },
   methods: {
-    async startScanner() {
-      this.isScanning = true;
-      this.isLoading = true;
-      this.result = null;
-      this.error = null;
+    async initScanner() {
+      // try {
+      //   const cameras = await Html5Qrcode.getCameras();
+      //   if (cameras && cameras.length) {
+      //     this.cameraId = cameras[0].id;
+      //     this.html5QrCode = new Html5Qrcode("reader");
+      //   } else {
+      //     this.error = "No camera found.";
+      //   }
+      // } catch (err) {
+      //   this.error = err.message || "Failed to initialize scanner.";
+      // }
 
-      this.$nextTick(async () => {
-        try {
-          const cameras = await Html5Qrcode.getCameras();
-          if (!cameras.length) throw new Error("No cameras found.");
-
-          this.cameraId = cameras[0].id;
-          this.html5QrCode = new Html5Qrcode("reader");
-
-          await this.html5QrCode.start(
-            //this.cameraId,
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            this.onScanSuccess,
-            this.onScanError
-          );
-
-          // Torch support
-          const track = this.html5QrCode.getRunningTrack();
-          const capabilities = track?.getCapabilities?.();
-          this.torchSupported = capabilities?.torch || false;
-        } catch (err) {
-          console.error("Start error:", err);
-          this.error = "Failed to start scanner: " + (err.message || err);
-          this.isScanning = false;
-        } finally {
-          this.isLoading = false;
-        }
-      });
-    },
-
-    stopScanner() {
-      if (this.html5QrCode) {
-        this.html5QrCode.stop().then(() => {
-          this.html5QrCode.clear();
-          this.html5QrCode = null;
-        });
-      }
-      this.isScanning = false;
-      this.torchOn = false;
-    },
-
-    async toggleTorch() {
       try {
-        const track = this.html5QrCode?.getRunningTrack();
-        const capabilities = track?.getCapabilities?.();
-        if (!capabilities?.torch) {
-          this.error = "Torch not supported on this device.";
+        const devices = await Html5Qrcode.getCameras();
+
+        if (!devices.length) {
+          this.error = "No cameras found on this device.";
           return;
         }
 
-        this.torchOn = !this.torchOn;
-
-        await track.applyConstraints({
-          advanced: [{ torch: this.torchOn }],
-        });
+        this.cameraId = devices[0].id;
+        this.html5QrCode = new Html5Qrcode("reader");
+        this.error = null; // clear any previous errors
       } catch (err) {
-        console.error("toggleTorch error:", err);
-        this.error = "Failed to toggle flashlight.";
+        this.error = "Failed to initialize scanner: " + (err.message || err);
+        console.error("initScanner error:", err);
       }
     },
+    async startScanner() {
+      if (this.isScanning) return;
 
+  this.result = null;
+  this.error = null;
+  this.isScanning = true;
+
+  // Wait for DOM to render #reader
+  this.$nextTick(async () => {
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras.length) {
+        this.error = "No cameras found.";
+        this.isScanning = false;
+        return;
+      }
+
+      this.cameraId = cameras[0].id;
+      this.html5QrCode = new Html5Qrcode("reader");
+
+      await this.html5QrCode.start(
+        //this.cameraId,
+        {
+          
+          facingMode: "environment"
+        },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          //rememberLastUsedCamera: true,
+        },
+        this.onScanSuccess,
+        this.onScanError
+      );
+
+      // Torch support
+      // const track = this.html5QrCode.getRunningTrack();
+      // const capabilities = track.getCapabilities?.();
+      // if (capabilities && capabilities.torch) {
+      //   this.torchSupported = true;
+      // }
+    } catch (err) {
+      this.error = "Failed to start scanner: " + (err.message || err);
+      this.isScanning = false;
+    }
+  });
+    },
+    async stopScanner() {
+      if (!this.html5QrCode || !this.isScanning) return;
+      try {
+        await this.html5QrCode.stop();
+        this.isScanning = false;
+        this.torchOn = false;
+      } catch (err) {
+        this.error = "Failed to stop scanner: " + (err.message || err);
+      }
+    },
     onScanSuccess(decodedText) {
       this.result = decodedText;
-      this.history.unshift(decodedText);
-      this.stopScanner();
-    },
+      this.scanHistory.unshift({
+        text: decodedText,
+        time: new Date()
+      });
 
-    onScanError(error) {
-      // Handle scan error (can be ignored for now)
+      // Restart scanner after short delay
+      this.stopScanner().then(() => {
+        setTimeout(() => this.startScanner(), 1000);
+      });
     },
+    onScanError(_) {
+      // Silent error or log if needed
+    },
+    toggleTorch() {
+      if (!this.html5QrCode || !this.isScanning) return;
+      const track = this.html5QrCode.getRunningTrack();
+      if (track) {
+        this.torchOn = !this.torchOn;
+        track
+          .applyConstraints({ advanced: [{ torch: this.torchOn }] })
+          .catch(() => {
+            this.error = "Flashlight toggle failed.";
+          });
+      }
+    },
+    formatTimestamp(date) {
+      return new Date(date).toLocaleString();
+    }
   },
+  beforeDestroy() {
+    if (this.html5QrCode && this.isScanning) {
+      this.html5QrCode.stop().catch(() => { });
+    }
+  }
 };
 </script>
 
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.4s ease;
 }
 
 .fade-enter,
