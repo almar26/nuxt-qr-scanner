@@ -6,8 +6,8 @@ export default {
 
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
-    titleTemplate: '%s - nuxt-qr-scanner',
-    title: 'nuxt-qr-scanner',
+    titleTemplate: '%s - Nuxt 2',
+    title: 'QR Code Scanner',
     htmlAttrs: {
       lang: 'en'
     },

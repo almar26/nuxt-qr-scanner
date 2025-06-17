@@ -1,7 +1,8 @@
 <template>
   <v-container>
-    <v-card class="mx-auto pa-4" max-width="500">
-      <v-card-title>QR Scanner</v-card-title>
+
+    <v-card class="mx-auto" max-width="500">
+      <v-card-title class="headline justify-center">QR Code Scanner</v-card-title>
 
       <!-- Scanner area -->
       <transition name="fade">
@@ -17,7 +18,6 @@
 
         </div>
 
-
         <!-- When not scanning -->
         <div v-else class="text-center py-10 text-grey">
           <v-icon size="64">mdi-qrcode-scan</v-icon>
@@ -25,18 +25,30 @@
         </div>
       </transition>
 
-      <!-- Action buttons -->
-      <v-row justify="center" class="mt-4">
-        <v-btn color="primary" @click="startScanner" v-if="!isScanning">
-          Start Scanning
+      <v-card-text>
+        <v-btn block color="primary" @click="startScanner" v-if="!isScanning">
+          <v-icon left>mdi-play</v-icon> Start Scanning
         </v-btn>
-        <v-btn color="error" @click="stopScanner" v-else>
-          Stop Scanning
+        <v-btn block color="error" @click="stopScanner" v-else>
+          <v-icon left>mdi-stop</v-icon> Stop Scanning
         </v-btn>
-        <v-btn  :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
+        <v-btn v-if="torchSupported" :color="torchOn ? 'yellow darken-2' : 'grey'" class="ml-2" @click="toggleTorch">
           {{ torchOn ? 'Flashlight Off' : 'Flashlight On' }}
         </v-btn>
-      </v-row>
+
+
+        <!-- Result -->
+
+        <v-card outlined class="mt-4">
+          <v-card-subtitle class="text-center">Scan Result:</v-card-subtitle>
+          <v-card-text class="text-center">
+            {{ result }}
+          </v-card-text>
+
+        </v-card>
+      </v-card-text>
+
+
       <v-row>
         <v-col>
           <!-- Error -->
@@ -44,10 +56,15 @@
             {{ error }}
           </v-alert>
 
+    
+
           <!-- Scan Result -->
-          <v-alert v-if="result" type="success" dense class="mt-4">
+          <!-- <v-alert v-if="result" type="success" dense class="mt-4">
             Scanned: {{ result }}
-          </v-alert>
+          </v-alert> -->
+
+   
+
 
           <!-- History -->
           <v-divider></v-divider>
@@ -95,6 +112,8 @@ export default {
       isLoading: false,
       result: null,
       error: null,
+      snackbarError: false,
+      snackbarResult: false,
       history: [],
       torchOn: false,
       torchSupported: false,
@@ -116,17 +135,12 @@ export default {
           this.html5QrCode = new Html5Qrcode("reader");
 
           await this.html5QrCode.start(
-            //this.cameraId,
             { facingMode: "environment" },
             { fps: 10, qrbox: { width: 250, height: 250 } },
             this.onScanSuccess,
             this.onScanError
           );
 
-          // Torch support
-          const track = this.html5QrCode.getRunningTrack();
-          const capabilities = track?.getCapabilities?.();
-          this.torchSupported = capabilities?.torch || false;
         } catch (err) {
           console.error("Start error:", err);
           this.error = "Failed to start scanner: " + (err.message || err);
@@ -148,29 +162,11 @@ export default {
       }
     },
 
-    async toggleTorch() {
-      try {
-        const track = this.html5QrCode?.getRunningTrack();
-        const capabilities = track?.getCapabilities?.();
-        if (!capabilities?.torch) {
-          this.error = "Torch not supported on this device.";
-          return;
-        }
-
-        this.torchOn = !this.torchOn;
-
-        await track.applyConstraints({
-          advanced: [{ torch: this.torchOn }],
-        });
-      } catch (err) {
-        console.error("toggleTorch error:", err);
-        this.error = "Failed to toggle flashlight.";
-      }
-    },
 
     onScanSuccess(decodedText) {
 
       this.result = decodedText;
+      this.snackbarResult = true;
       this.history.unshift({
         text: decodedText,
         time: new Date()
