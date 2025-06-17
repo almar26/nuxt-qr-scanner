@@ -116,6 +116,11 @@ export default {
           icon: 'mdi-qrcode-scan',
           title: 'Vue Scaner',
           to: '/vue-scanner'
+        },
+        {
+          icon: 'mdi-qrcode-scan',
+          title: 'HTML 5 QR Scanner',
+          to: '/html5-qrcode'
         }
       ],
       miniVariant: false,
