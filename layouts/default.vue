@@ -7,6 +7,13 @@
       fixed
       app
     >
+    <v-list>
+      <div v-if="$auth.loggedIn">
+        <p>Welcome, {{ $auth.user.name }}</p>
+        <img :src="$auth.user.picture" alt="User picture">
+        <v-btn @click="logout">Logout</v-btn>
+      </div>
+    </v-list>
       <v-list>
         <v-list-item
           v-for="(item, i) in items"
@@ -74,6 +81,7 @@
 <script>
 export default {
   name: 'DefaultLayout',
+  middleware: ['auth'],
   data () {
     return {
       clipped: false,
@@ -110,6 +118,21 @@ export default {
       right: true,
       rightDrawer: false,
       title: 'QR Code Scanner using "html5-qrcode"'
+    }
+  },
+
+  mounted() {
+    if (!this.$auth.loggedIn) {
+      console.log("Not logged in")
+    } else {
+      console.log("You are logged in")
+    }
+  },
+
+  methods: {
+    async logout() {
+      await this.$auth.logout()
+      this.$router.push('/auth/signin')
     }
   }
 }

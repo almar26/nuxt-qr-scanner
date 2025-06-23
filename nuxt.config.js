@@ -45,12 +45,44 @@ export default {
   modules: [
     // https://go.nuxtjs.dev/axios
     '@nuxtjs/axios',
+    '@nuxt/http',
+    '@nuxtjs/auth-next'
   ],
 
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
   axios: {
     // Workaround to avoid enforcing hard-coded localhost:3000: https://github.com/nuxt-community/axios-module/issues/308
     baseURL: '/',
+  },
+
+  auth: {
+    redirect: {
+      login: '/auth/signin',      // Redirect user when not connected
+      logout: '/auth/signin',     // Redirect user when logout
+      callback: '/',   // Callback URL after login
+      home: '/'        // After login redirect
+    },
+    strategies: {
+      google: {
+        //scheme: 'oauth2',
+        endpoints: {
+          authorization: 'https://accounts.google.com/o/oauth2/auth',
+          userInfo: 'https://www.googleapis.com/oauth2/v3/userinfo'
+        },
+        token: {
+          property: 'access_token',
+          type: 'Bearer',
+          maxAge: 1800
+        },
+        responseType: 'token id_token ',
+        clientId: '556868606794-vim29disnrl6hrf149ud1r0kopjfevjk.apps.googleusercontent.com',
+        scope: ['openid', 'profile', 'email'],
+        redirectUri: 'http://localhost:3000',
+        codeChallengeMethod: '',
+        
+      }
+    },
+    autoFetchUser: false
   },
 
   // Vuetify module configuration: https://go.nuxtjs.dev/config-vuetify

@@ -1,5 +1,8 @@
 <template>
   <v-container class="fill-height d-flex flex-column justify-center align-center">
+    <v-card>
+      
+    </v-card>
     <v-card class="pa-6 text-center" max-width="400">
       <v-card-title class="headline">Tap Entry</v-card-title>
       <v-card-text>
@@ -55,6 +58,7 @@
 import { QrcodeStream } from 'vue-qrcode-reader'
 
 export default {
+  middleware: ['auth'],
   components: {
     QrcodeStream
   },
