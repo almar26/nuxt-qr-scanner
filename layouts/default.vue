@@ -1,27 +1,30 @@
 <template>
   <v-app dark>
-    <v-navigation-drawer
-      v-model="drawer"
-      :mini-variant="miniVariant"
-      :clipped="clipped"
-      fixed
-      app
-    >
-    <v-list>
-      <div v-if="$auth.loggedIn">
-        <p>Welcome, {{ $auth.user.name }}</p>
-        <img :src="$auth.user.picture" alt="User picture">
-        <v-btn @click="logout">Logout</v-btn>
-      </div>
-    </v-list>
+    <v-navigation-drawer v-model="drawer" :mini-variant="miniVariant" :clipped="clipped" fixed app>
+      <template v-slot:prepend>
+        <v-list-item two-line v-if="$auth.strategy.name === 'google'">
+          <v-list-item-avatar>
+            <img :src="$auth.user.picture">
+          </v-list-item-avatar>
+          <v-list-item-content>
+            <v-list-item-title>{{ $auth.user.name }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $auth.user.email }}</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item two-line v-if="$auth.strategy.name === 'local'">
+          <v-list-item-avatar>
+            <img src="https://randomuser.me/api/portraits/women/81.jpg">
+          </v-list-item-avatar>
+          <v-list-item-content>
+            <v-list-item-title>{{ $auth.user.username }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $auth.user.email }}</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+      </template>
+      <v-divider></v-divider>
+
       <v-list>
-        <v-list-item
-          v-for="(item, i) in items"
-          :key="i"
-          :to="item.to"
-          router
-          exact
-        >
+        <v-list-item v-for="(item, i) in items" :key="i" :to="item.to" router exact>
           <v-list-item-action>
             <v-icon>{{ item.icon }}</v-icon>
           </v-list-item-action>
@@ -30,20 +33,21 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
+
+      <template v-slot:append>
+        <div class="pa-2" v-if="$auth.loggedIn">
+          <v-btn block @click="$auth.logout()">
+            <v-icon left>mdi-logout</v-icon> Logout
+          </v-btn>
+        </div>
+      </template>
     </v-navigation-drawer>
-    <v-app-bar
-      :clipped-left="clipped"
-      fixed
-      app
-    >
+    <v-app-bar :clipped-left="clipped" fixed app>
       <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
-    
+
       <v-toolbar-title>{{ title }}</v-toolbar-title>
       <v-spacer />
-      <v-btn
-        icon
-        @click.stop="rightDrawer = !rightDrawer"
-      >
+      <v-btn icon @click.stop="rightDrawer = !rightDrawer">
         <v-icon>mdi-menu</v-icon>
       </v-btn>
     </v-app-bar>
@@ -52,12 +56,7 @@
         <Nuxt />
       </v-container>
     </v-main>
-    <v-navigation-drawer
-      v-model="rightDrawer"
-      :right="right"
-      temporary
-      fixed
-    >
+    <v-navigation-drawer v-model="rightDrawer" :right="right" temporary fixed>
       <v-list>
         <v-list-item @click.native="right = !right">
           <v-list-item-action>
@@ -69,10 +68,7 @@
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
-    <v-footer
-      :absolute="!fixed"
-      app
-    >
+    <v-footer :absolute="!fixed" app>
       <span>&copy; {{ new Date().getFullYear() }}</span>
     </v-footer>
   </v-app>
@@ -82,7 +78,7 @@
 export default {
   name: 'DefaultLayout',
   middleware: ['auth'],
-  data () {
+  data() {
     return {
       clipped: false,
       drawer: false,

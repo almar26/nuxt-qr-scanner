@@ -59,12 +59,13 @@ export default {
     redirect: {
       login: '/auth/signin',      // Redirect user when not connected
       logout: '/auth/signin',     // Redirect user when logout
-      callback: '/',   // Callback URL after login
+      callback: '/auth/callback',   // Callback URL after login
       home: '/'        // After login redirect
     },
+    autoFetchUser: false,
     strategies: {
       google: {
-        //scheme: 'oauth2',
+        scheme: 'oauth2',
         endpoints: {
           authorization: 'https://accounts.google.com/o/oauth2/auth',
           userInfo: 'https://www.googleapis.com/oauth2/v3/userinfo'
@@ -77,12 +78,37 @@ export default {
         responseType: 'token id_token ',
         clientId: '556868606794-vim29disnrl6hrf149ud1r0kopjfevjk.apps.googleusercontent.com',
         scope: ['openid', 'profile', 'email'],
-        redirectUri: 'http://localhost:3000',
-        codeChallengeMethod: '',
-        
+        redirectUri: 'http://localhost:3000/auth/callback',
+        codeChallengeMethod: '', 
+      },
+
+      local: {
+        endpoints: {
+          login: {
+            url: process.env.LOGIN_URL,
+            method: "post",
+            propertyName: "token",
+          },
+          logout: false,
+          user: {
+            url: process.env.PROFILE_URL,
+            method: "get",
+            propertyName: "user"
+          }
+        },
+        token: {
+          property: "jwt",
+          global: true,
+          required: true,
+          type: "Bearer",
+        },
+        user: {
+          property: false,
+          autoFetch: true,
+        },
       }
     },
-    autoFetchUser: false
+  
   },
 
   // Vuetify module configuration: https://go.nuxtjs.dev/config-vuetify
